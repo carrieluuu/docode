@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "docode — Developer Mode for Google Docs",
+  "version": "0.1.0",
+  "description": "Live, editable code blocks for Google Docs.",
+  "permissions": ["storage", "clipboardRead", "clipboardWrite"],
+  "host_permissions": ["https://docs.google.com/document/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://docs.google.com/document/*"],
+      "js": ["src/languages.js", "src/highlighter.js", "src/editor-model.js", "src/docs-adapter.js", "src/content.js"],
+      "css": ["src/content.css"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_title": "docode"
+  }
+}
