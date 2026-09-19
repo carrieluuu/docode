@@ -1,20 +1,32 @@
 {
   "manifest_version": 3,
   "name": "docode — Developer Mode for Google Docs",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Live, editable code blocks for Google Docs.",
   "permissions": ["storage", "clipboardRead", "clipboardWrite"],
   "host_permissions": ["https://docs.google.com/document/*"],
+  "background": {
+    "service_worker": "src/service-worker.js"
+  },
   "content_scripts": [
     {
       "matches": ["https://docs.google.com/document/*"],
-      "js": ["src/languages.js", "src/highlighter.js", "src/editor-model.js", "src/docs-adapter.js", "src/content.js"],
+      "js": ["src/languages.js", "src/language-detector.js", "src/highlighter.js", "src/editor-model.js", "src/docs-adapter.js", "src/content.js"],
       "css": ["src/content.css"],
       "run_at": "document_idle",
       "all_frames": false
     }
   ],
   "action": {
-    "default_title": "docode"
+    "default_title": "Open a docode code block"
+  },
+  "commands": {
+    "open-code-editor": {
+      "suggested_key": {
+        "default": "Alt+Shift+C",
+        "mac": "Option+Shift+C"
+      },
+      "description": "Open a docode code block"
+    }
   }
 }

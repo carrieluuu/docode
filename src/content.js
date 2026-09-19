@@ -3,6 +3,7 @@
   window.__docodeLoaded = true;
 
   const { normalize, all: languages } = window.DocodeLanguages;
+  const { detect: detectLanguage } = window.DocodeLanguageDetector;
   const { highlight } = window.DocodeHighlighter;
   const model = window.DocodeEditorModel;
   const docs = window.DocodeDocsAdapter;
@@ -21,6 +22,7 @@
       <label class="dc-language-label"><span class="dc-visually-hidden">Language</span>
         <select class="dc-language"></select>
       </label>
+      <span class="dc-auto-language" hidden>Auto</span>
       <div class="dc-actions">
         <button class="dc-button dc-insert" type="button">Insert</button>
       </div>
@@ -41,6 +43,7 @@
   const textarea = shell.querySelector(".dc-editor");
   const code = shell.querySelector(".dc-highlight code");
   const languageSelect = shell.querySelector(".dc-language");
+  const autoLanguage = shell.querySelector(".dc-auto-language");
   const status = shell.querySelector(".dc-status");
   Object.entries(languages).forEach(([value, definition]) => {
     const option = document.createElement("option");
@@ -80,6 +83,23 @@
     code.parentElement.scrollLeft = textarea.scrollLeft;
   }
 
+  function updateDetectedLanguage() {
+    if (!active?.autoDetect) return;
+    const result = detectLanguage(textarea.value);
+    autoLanguage.hidden = false;
+    if (!result) {
+      autoLanguage.textContent = languageSelect.value === "plain"
+        ? "Auto"
+        : `Auto · ${languages[languageSelect.value]?.label || ""}`;
+      return;
+    }
+    if (languageSelect.value !== result.language) {
+      languageSelect.value = result.language;
+      render();
+    }
+    autoLanguage.textContent = `Auto · ${languages[result.language].label}`;
+  }
+
   let saveTimer;
   function saveDraft() {
     clearTimeout(saveTimer);
@@ -89,6 +109,7 @@
         [storageKey()]: {
           code: textarea.value,
           language: languageSelect.value,
+          autoDetect: active?.autoDetect === true,
           pending: true,
           updatedAt: Date.now()
         }
@@ -116,13 +137,17 @@
     shell.style.top = `${top}px`;
   }
 
-  async function openEditor(language = "plain", options = {}) {
-    if (active) return;
+  async function openEditor(language = "", options = {}) {
+    if (active) {
+      textarea.focus();
+      return;
+    }
     const requestedLanguage = normalize(language);
     active = {
       language: requestedLanguage,
       openerRemoved: options.openerRemoved !== false,
-      returnStyle: docs.currentTextStyle()
+      returnStyle: docs.currentTextStyle(),
+      autoDetect: !language.trim()
     };
     languageSelect.value = active.language;
     textarea.value = "";
@@ -136,10 +161,13 @@
     if (active && draft) {
       textarea.value = draft.code || "";
       languageSelect.value = language.trim() ? requestedLanguage : (draft.language || requestedLanguage);
+      if (!language.trim() && typeof draft.autoDetect === "boolean") active.autoDetect = draft.autoDetect;
       status.textContent = "Draft restored";
     } else {
       status.textContent = "Draft saved locally";
     }
+    autoLanguage.hidden = !active.autoDetect;
+    updateDetectedLanguage();
     render();
     requestAnimationFrame(() => textarea.focus());
   }
@@ -190,9 +218,15 @@
     bindTimer = setTimeout(bindDocsTargets, 100);
   }).observe(document.documentElement, { childList: true, subtree: true });
 
-  textarea.addEventListener("input", () => { render(); saveDraft(); });
+  textarea.addEventListener("input", () => { render(); updateDetectedLanguage(); saveDraft(); });
   textarea.addEventListener("scroll", render);
-  languageSelect.addEventListener("change", () => { render(); saveDraft(); textarea.focus(); });
+  languageSelect.addEventListener("change", () => {
+    if (active) active.autoDetect = false;
+    autoLanguage.hidden = true;
+    render();
+    saveDraft();
+    textarea.focus();
+  });
 
   textarea.addEventListener("keydown", (event) => {
     const start = textarea.selectionStart;
@@ -288,9 +322,13 @@
     if (active && !manualPlacement) positionShell();
   }, true);
   window.addEventListener("resize", () => active && clampShell());
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message?.type !== "docode:open-editor") return;
+    void openEditor("", { openerRemoved: true });
+  });
   window.Docode = {
     open: openEditor,
-    restore: (language = "plain") => openEditor(language, { restoreDraft: true }),
+    restore: (language = "") => openEditor(language, { restoreDraft: true }),
     close: closeEditor
   };
 })();

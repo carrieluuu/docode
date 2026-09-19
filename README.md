@@ -10,7 +10,7 @@ The long-term goal is simple:
 
 ## Current prototype
 
-Type a fenced opener such as `````python`` in a Google Doc and press Enter. docode opens a movable, resizable editor near the document caret.
+Select the docode extension button, press **Option+Shift+C** on macOS, or press **Alt+Shift+C** on Windows/Linux. docode opens a movable, resizable editor near the document caret without inserting trigger text. Fenced openers such as `````python`` remain available when automatic language selection is more convenient.
 
 The prototype currently supports:
 
@@ -21,6 +21,8 @@ The prototype currently supports:
 - Indentation preservation when pressing Enter
 - Lightweight extra indentation after Python colons and opening braces
 - Automatic language selection from fenced openers
+- Live language inference when the toolbar or keyboard shortcut opens a blank editor
+- Opener-free launch from the Chrome toolbar, Option+Shift+C on macOS, or Alt+Shift+C on Windows/Linux
 - A compact language selector
 - Smart Canvas-inspired visual styling
 - Draggable and resizable editor placement
@@ -49,13 +51,16 @@ Only a draft that has not yet been inserted remains extension-local.
 4. Select **Load unpacked**.
 5. Choose the cloned `docode` directory.
 6. Open or reload a Google Doc.
-7. Type `````python`` and press Enter.
+7. Select the docode toolbar button, press **Option+Shift+C** on macOS, or press **Alt+Shift+C** on Windows/Linux.
 
 When making local changes, use **Reload** on the extension card and reload the Google Doc.
+
+Chrome shortcuts can be customized at `chrome://extensions/shortcuts` if the default conflicts with another extension or local setup.
 
 ## Using the editor
 
 - Choose a language from the selector or include it in the opening fence.
+- Open docode without leaving trigger text by using the toolbar button, **Option+Shift+C** on macOS, or **Alt+Shift+C** on Windows/Linux.
 - Press **Tab** or **Shift+Tab** to indent or dedent.
 - Drag the top toolbar to move the editor.
 - Drag the lower-right corner to resize it.
@@ -66,7 +71,7 @@ When making local changes, use **Reload** on the extension card and reload the G
 
 Google Docs uses a canvas-based editor and does not expose a supported live-caret API to Chrome extensions. The current prototype therefore has several deliberate constraints:
 
-- The typed fenced opener remains visible and must be removed manually.
+- A typed fenced opener remains visible and must be removed manually; use the toolbar or keyboard shortcut to avoid it.
 - Clicking previously inserted code does not reopen it in docode yet.
 - The editor is an overlay during active editing; changes are written back when inserted.
 - The Google Docs text-event bridge is undocumented and needs broader compatibility testing.
