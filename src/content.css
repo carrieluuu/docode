@@ -78,6 +78,16 @@
   cursor: pointer;
 }
 .dc-language:hover, .dc-language:focus { background: var(--dc-surface-hover); }
+.dc-auto-language {
+  padding: 3px 7px;
+  border-radius: 10px;
+  background: #e8f0fe;
+  color: #1967d2;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.dc-auto-language[hidden] { display: none !important; }
 .dc-actions { display: flex; margin-left: auto; }
 .dc-button, .dc-icon-button {
   border: 0;

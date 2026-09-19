@@ -14,7 +14,7 @@
 - [ ] Assign every inserted block a stable marker or Google Docs named range.
 - [ ] Reopen an existing block in the editor when the user returns to edit it.
 - [ ] Replace the same document range on save without losing collaborator edits.
-- [ ] Reconsider a keyboard shortcut or toolbar action instead of triple backticks while reliable opener replacement is unavailable.
+- [x] Add an opener-free Chrome toolbar action with `Option+Shift+C` on macOS and `Alt+Shift+C` on Windows/Linux while reliable fence replacement is unavailable.
 
 ### Editing ergonomics
 
@@ -33,6 +33,11 @@
 - [x] Highlight code as it changes without moving the editor caret.
 - [x] Support Python, JavaScript, TypeScript, Java, C, C++, C#, Go, SQL, Bash, HTML, CSS, and JSON.
 - [x] Allow the language to be changed from the code-block editor.
+- [x] Infer the language while typing when the editor opens without an explicit language.
+- [ ] Upgrade automatic detection to a hybrid Highlight.js implementation: keep high-confidence rules for short snippets, then use `highlightAuto` for longer or ambiguous code.
+- [ ] Bundle only docode's supported Highlight.js grammars and restrict detection to that language subset.
+- [ ] Add a confidence margin, detection debounce, and language-switch hysteresis so the selector does not jump while the user types.
+- [ ] Preserve explicit fenced-language tags and manual selections as authoritative overrides of automatic detection.
 - [ ] Add search to the language selector.
 - [ ] Refresh highlighting immediately when reopening or changing an existing block.
 - [ ] Replace the lightweight tokenizer with grammar-complete highlighting where needed.
