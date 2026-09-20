@@ -10,7 +10,7 @@ The long-term goal is simple:
 
 ## Current prototype
 
-Select the docode extension button, press **Option+Shift+C** on macOS, or press **Alt+Shift+C** on Windows/Linux. docode opens a movable, resizable editor near the document caret without inserting trigger text. Fenced openers such as `````python`` remain available when automatic language selection is more convenient.
+Select the docode extension button, press **Option+Shift+C** on macOS, or press **Alt+Shift+C** on Windows/Linux. With only a caret, docode opens a new movable, resizable editor without inserting trigger text. With text selected, it imports or reopens that code for an in-place update. Fenced openers such as `````python`` remain available when automatic language selection is more convenient.
 
 The prototype currently supports:
 
@@ -29,6 +29,9 @@ The prototype currently supports:
 - Per-document local draft recovery
 - Rich-text insertion with a plain-text clipboard fallback
 - A return paragraph that restores the surrounding note font and size
+- Per-document language memory without adding hidden characters to copied code
+- Reopening and updating a selected docode block in place
+- Converting selected legacy code or ordinary text into an editable docode block
 
 ## Documents remain portable
 
@@ -65,19 +68,22 @@ Chrome shortcuts can be customized at `chrome://extensions/shortcuts` if the def
 - Drag the top toolbar to move the editor.
 - Drag the lower-right corner to resize it.
 - Select **Insert** to write the formatted code into the document.
-- If automatic insertion is unavailable, click the document and press Command+V. The draft stays recoverable until Docs receives the paste.
+- To edit an existing block, select the complete block in Google Docs and invoke docode again. When Chrome allows automatic selection capture, the editor opens it immediately. Otherwise, choose **Edit selection** in the console. The primary action then becomes **Update in Docs** and replaces the selection.
+- Selecting unmarked code before invoking docode imports it into the editor and upgrades it to a reusable docode block.
+- If automatic insertion is unavailable, click the document and press Command+V or Ctrl+V. The draft stays recoverable until Docs receives the paste.
 
 ## Known limitations
 
 Google Docs uses a canvas-based editor and does not expose a supported live-caret API to Chrome extensions. The current prototype therefore has several deliberate constraints:
 
 - A typed fenced opener remains visible and must be removed manually; use the toolbar or keyboard shortcut to avoid it.
-- Clicking previously inserted code does not reopen it in docode yet.
+- Existing blocks must currently be selected before invoking docode; Docs does not expose a supported document index for a collapsed caret.
+- Language memory is local to the current Chrome profile; another device falls back to automatic detection or manual selection.
 - The editor is an overlay during active editing; changes are written back when inserted.
 - The Google Docs text-event bridge is undocumented and needs broader compatibility testing.
 - Collaboration behavior still needs validation with a second account and without the extension installed.
 
-These are persistence and anchoring problems rather than editor problems. The planned solution is an authenticated Google Docs API bridge using stable markers or named ranges. A shortcut-based trigger is also being considered so users can open the editor without leaving fence text behind.
+These are persistence and anchoring problems rather than editor problems. Selection-based updates keep the Google Doc text clean and remember language choices locally. Collapsed-caret lookup, cross-device language metadata, and collaboration-safe replacement may eventually use an authenticated Google Docs API bridge or another supported range primitive.
 
 See [TODO.md](TODO.md) for the current validation backlog.
 
@@ -89,7 +95,7 @@ The prototype intentionally has no runtime dependencies or build step.
 npm test
 ```
 
-The tests cover indentation, auto-indent, fence sanitization, safe HTML escaping, and syntax-token rendering.
+The tests cover indentation, auto-indent, fence sanitization, block fingerprints, language detection, safe HTML escaping, and syntax-token rendering.
 
 ### Project structure
 
@@ -101,6 +107,7 @@ docode/
 │   ├── content.css        # Smart Canvas-inspired editor styling
 │   ├── docs-adapter.js    # Google Docs event, caret, and clipboard bridge
 │   ├── editor-model.js    # Pure indentation and fence behavior
+│   ├── block-registry.js  # Local code fingerprints and language memory
 │   ├── highlighter.js     # Dependency-free V1 syntax tokenizer
 │   └── languages.js       # Supported languages and aliases
 └── tests/
@@ -110,12 +117,13 @@ docode/
 
 The extension keeps Docs-specific integration isolated from the editor model. That boundary lets the interaction layer evolve without coupling indentation, highlighting, or draft behavior to Google Docs internals.
 
-The next major milestone is durable block identity:
+The current selection-based block lifecycle is:
 
-1. Insert a uniquely identifiable code block.
-2. Resolve it to a Google Docs range.
-3. Remove the typed opener automatically.
-4. Reopen the current range in the editor.
-5. Replace and restyle the same range without losing collaborator edits.
+1. Insert clean, ordinarily formatted Google Docs code.
+2. Select that block in Google Docs and invoke docode.
+3. Restore its source and use local language memory or automatic detection.
+4. Replace and restyle the selected block on update.
+
+The next anchoring milestone is resolving an existing block from a collapsed caret without relying on undocumented canvas internals.
 
 The current Docs adapter selectors were validated against Google Docs on September 13, 2026. They are evidence for this prototype, not a long-term compatibility guarantee.

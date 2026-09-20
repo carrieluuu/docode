@@ -11,9 +11,12 @@
 - [x] Preserve unsent drafts when automatic insertion fails and support manual-paste recovery.
 - [ ] Replace or remove the fenced opener automatically through a safe document-range operation.
 - [ ] Support closing triple backticks as a natural way to finish and insert a block.
-- [ ] Assign every inserted block a stable marker or Google Docs named range.
-- [ ] Reopen an existing block in the editor when the user returns to edit it.
-- [ ] Replace the same document range on save without losing collaborator edits.
+- [ ] Assign blocks durable Docs-native identity without adding hidden characters to copied code.
+- [x] Reopen a selected existing block with its code and language restored.
+- [x] Replace the selected block in place when the user chooses **Update in Docs**.
+- [x] Import selected legacy code and remember its language locally after formatting.
+- [ ] Resolve and reopen a block from a collapsed caret without requiring a complete selection.
+- [ ] Replace a stable document range on save without losing concurrent collaborator edits.
 - [x] Add an opener-free Chrome toolbar action with `Option+Shift+C` on macOS and `Alt+Shift+C` on Windows/Linux while reliable fence replacement is unavailable.
 
 ### Editing ergonomics
@@ -39,7 +42,7 @@
 - [ ] Add a confidence margin, detection debounce, and language-switch hysteresis so the selector does not jump while the user types.
 - [ ] Preserve explicit fenced-language tags and manual selections as authoritative overrides of automatic detection.
 - [ ] Add search to the language selector.
-- [ ] Refresh highlighting immediately when reopening or changing an existing block.
+- [x] Refresh highlighting immediately when reopening or changing an existing block.
 - [ ] Replace the lightweight tokenizer with grammar-complete highlighting where needed.
 
 ### Smart paste

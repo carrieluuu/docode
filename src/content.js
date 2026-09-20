@@ -6,11 +6,15 @@
   const { detect: detectLanguage } = window.DocodeLanguageDetector;
   const { highlight } = window.DocodeHighlighter;
   const model = window.DocodeEditorModel;
+  const blockRegistry = window.DocodeBlockRegistry;
   const docs = window.DocodeDocsAdapter;
   const fence = { buffer: "", timer: 0 };
   const handledKeyEvents = new WeakSet();
   let active = null;
+  let openingFromDocument = false;
   let awaitingDocsPaste = false;
+  let completionMessage = "Code inserted into Google Docs";
+  let pendingBlock = null;
   let manualPlacement = false;
 
   const shell = document.createElement("section");
@@ -24,6 +28,7 @@
       </label>
       <span class="dc-auto-language" hidden>Auto</span>
       <div class="dc-actions">
+        <button class="dc-secondary-button dc-load-selection" type="button" hidden>Edit selection</button>
         <button class="dc-button dc-insert" type="button">Insert</button>
       </div>
       <button class="dc-icon-button dc-close" type="button" aria-label="Close">×</button>
@@ -44,6 +49,8 @@
   const code = shell.querySelector(".dc-highlight code");
   const languageSelect = shell.querySelector(".dc-language");
   const autoLanguage = shell.querySelector(".dc-auto-language");
+  const loadSelectionButton = shell.querySelector(".dc-load-selection");
+  const commitButton = shell.querySelector(".dc-insert");
   const status = shell.querySelector(".dc-status");
   Object.entries(languages).forEach(([value, definition]) => {
     const option = document.createElement("option");
@@ -64,7 +71,7 @@
     toastTimer = setTimeout(() => { toast.hidden = true; }, 5000);
   }
 
-  function clipboardHtml(value, language, returnStyle) {
+  function clipboardPayload(value, language, returnStyle, includeReturn) {
     const styled = highlight(value, language)
       .replaceAll('class="dc-token dc-keyword"', 'style="color:#b80672;font-weight:600"')
       .replaceAll('class="dc-token dc-string"', 'style="color:#188038"')
@@ -74,7 +81,13 @@
     // Google Docs drops a completely empty styled paragraph. A zero-width
     // space preserves the return paragraph and its original note typography
     // while remaining visually empty.
-    return `<pre data-docode-language="${language}" style="font-family:'Roboto Mono',Menlo,Consolas,monospace;font-size:10.5pt;line-height:1.5;background:#f8f9fa;color:#202124;white-space:pre-wrap;margin:0;padding:10px 12px">${styled}</pre><div data-docode-return="true" style="font-family:'${returnFont}',Arial,sans-serif;font-size:${returnStyle.fontSize}pt;line-height:1.4;color:#202124"><span style="font-family:'${returnFont}',Arial,sans-serif;font-size:${returnStyle.fontSize}pt;color:#202124">&#8203;</span></div>`;
+    const returnParagraph = includeReturn
+      ? `<div data-docode-return="true" style="font-family:'${returnFont}',Arial,sans-serif;font-size:${returnStyle.fontSize}pt;line-height:1.4;color:#202124"><span style="font-family:'${returnFont}',Arial,sans-serif;font-size:${returnStyle.fontSize}pt;color:#202124">&#8203;</span></div>`
+      : "";
+    return {
+      text: value + (includeReturn ? "\n" : ""),
+      html: `<pre data-docode-language="${language}" style="font-family:'Roboto Mono',Menlo,Consolas,monospace;font-size:10.5pt;line-height:1.5;background:#f8f9fa;color:#202124;white-space:pre-wrap;margin:0;padding:10px 12px">${styled}</pre>${returnParagraph}`
+    };
   }
 
   function render() {
@@ -110,6 +123,8 @@
           code: textarea.value,
           language: languageSelect.value,
           autoDetect: active?.autoDetect === true,
+          blockId: active?.blockId,
+          mode: active?.mode || "insert",
           pending: true,
           updatedAt: Date.now()
         }
@@ -143,26 +158,42 @@
       return;
     }
     const requestedLanguage = normalize(language);
-    active = {
+    const selectedBlock = options.block || null;
+    const session = {
       language: requestedLanguage,
       openerRemoved: options.openerRemoved !== false,
       returnStyle: docs.currentTextStyle(),
-      autoDetect: !language.trim()
+      autoDetect: options.autoDetect === true || (!selectedBlock && !language.trim()),
+      blockId: selectedBlock?.id || null,
+      mode: selectedBlock ? "edit" : "insert"
     };
+    active = session;
     languageSelect.value = active.language;
-    textarea.value = "";
+    textarea.value = selectedBlock?.code || "";
+    commitButton.textContent = selectedBlock ? "Update in Docs" : "Insert";
+    loadSelectionButton.hidden = selectedBlock || !options.allowSelectionLoad;
     shell.hidden = false;
     manualPlacement = false;
     positionShell();
 
     const saved = await chrome.storage.local.get(storageKey());
+    if (active !== session) return;
     const storedDraft = saved[storageKey()];
-    const draft = options.restoreDraft || storedDraft?.pending ? storedDraft : null;
+    const matchingEditDraft = selectedBlock
+      && storedDraft?.pending
+      && storedDraft.mode === "edit"
+      && storedDraft.blockId === selectedBlock.id;
+    const insertDraft = !selectedBlock
+      && storedDraft?.pending
+      && storedDraft.mode !== "edit";
+    const draft = options.restoreDraft || matchingEditDraft || insertDraft ? storedDraft : null;
     if (active && draft) {
       textarea.value = draft.code || "";
-      languageSelect.value = language.trim() ? requestedLanguage : (draft.language || requestedLanguage);
-      if (!language.trim() && typeof draft.autoDetect === "boolean") active.autoDetect = draft.autoDetect;
-      status.textContent = "Draft restored";
+      languageSelect.value = draft.language || requestedLanguage;
+      if (typeof draft.autoDetect === "boolean") active.autoDetect = draft.autoDetect;
+      status.textContent = selectedBlock ? "Edit draft restored" : "Draft restored";
+    } else if (selectedBlock) {
+      status.textContent = "Editing selected code";
     } else {
       status.textContent = "Draft saved locally";
     }
@@ -175,6 +206,43 @@
   function closeEditor() {
     shell.hidden = true;
     active = null;
+    awaitingDocsPaste = false;
+    pendingBlock = null;
+  }
+
+  async function selectedCodeFromDocument(options = {}) {
+    const selectedText = await docs.readSelectedText(options);
+    if (!selectedText?.trim()) return null;
+    const code = blockRegistry.normalizedCode(selectedText);
+    const rememberedLanguage = await blockRegistry.languageFor(docs.documentId(), code);
+    return {
+      language: rememberedLanguage || "",
+      block: { id: blockRegistry.fingerprint(code), language: rememberedLanguage || "plain", code },
+      autoDetect: !rememberedLanguage
+    };
+  }
+
+  async function openFromDocument() {
+    if (active || openingFromDocument) {
+      textarea.focus();
+      return;
+    }
+    openingFromDocument = true;
+    try {
+      const selection = await selectedCodeFromDocument();
+      if (selection) {
+        await openEditor(selection.language, {
+          autoDetect: selection.autoDetect,
+          block: selection.block,
+          importSelection: true,
+          openerRemoved: true
+        });
+        return;
+      }
+      await openEditor("", { allowSelectionLoad: true, openerRemoved: true });
+    } finally {
+      openingFromDocument = false;
+    }
   }
 
   function onDocsKeydown(event) {
@@ -252,8 +320,29 @@
 
   shell.querySelector(".dc-close").addEventListener("click", closeEditor);
 
-  function completeInsertion(message = "Code inserted into Google Docs") {
+  loadSelectionButton.addEventListener("click", async () => {
+    status.textContent = "Loading selection…";
+    const selection = await selectedCodeFromDocument({ skipSelectionCheck: true });
+    if (!selection) {
+      status.textContent = "Select the complete code block, then try again";
+      showToast("Select the complete code block in Docs, then choose Edit selection");
+      return;
+    }
+    closeEditor();
+    await openEditor(selection.language, {
+      autoDetect: selection.autoDetect,
+      block: selection.block,
+      importSelection: true,
+      openerRemoved: true
+    });
+  });
+
+  function completeInsertion(message = completionMessage) {
     awaitingDocsPaste = false;
+    if (pendingBlock) {
+      void blockRegistry.remember(docs.documentId(), pendingBlock.code, pendingBlock.language).catch(() => {});
+      pendingBlock = null;
+    }
     chrome.storage.local.remove(storageKey());
     closeEditor();
     showToast(message);
@@ -267,31 +356,41 @@
     }, 0);
   }
 
-  shell.querySelector(".dc-insert").addEventListener("click", async () => {
+  commitButton.addEventListener("click", async () => {
     const value = model.stripOuterFence(textarea.value);
     const language = languageSelect.value;
     const openerRemoved = active?.openerRemoved !== false;
     const returnStyle = active?.returnStyle || docs.currentTextStyle();
-    status.textContent = "Inserting…";
+    const editing = active?.mode === "edit";
+    const payload = clipboardPayload(value, language, returnStyle, !editing);
+    pendingBlock = { code: value, language };
+    completionMessage = editing
+      ? "Code block updated in Google Docs"
+      : (openerRemoved
+        ? "Code inserted into Google Docs"
+        : "Code inserted — remove the original fenced opener if it remains");
+    status.textContent = editing ? "Updating…" : "Inserting…";
     try {
-      await docs.writeClipboard(`${value}\n`, clipboardHtml(value, language, returnStyle));
+      await docs.writeClipboard(payload.text, payload.html);
       awaitingDocsPaste = true;
       shell.hidden = true;
       const inserted = docs.pasteClipboard();
       if (inserted) {
         // Some Docs builds do not expose the paste event back to the isolated
         // extension world even when insertion succeeds.
-        if (awaitingDocsPaste) completeInsertion(openerRemoved
-          ? "Code inserted into Google Docs"
-          : "Code inserted — remove the original fenced opener if it remains"
-        );
+        if (awaitingDocsPaste) completeInsertion();
       } else {
         shell.hidden = false;
-        status.textContent = "Copied — click the document and press ⌘V";
-        showToast("Code copied — press ⌘V to paste it in Docs");
+        status.textContent = editing
+          ? "Copied — reselect the code block and paste"
+          : "Copied — click the document and paste";
+        showToast(editing
+          ? "Update copied — reselect the original code block and paste"
+          : "Code copied — press ⌘V or Ctrl+V to paste it in Docs");
       }
     } catch {
       awaitingDocsPaste = false;
+      pendingBlock = null;
       shell.hidden = false;
       status.textContent = "Could not access the clipboard";
       textarea.focus();
@@ -324,10 +423,11 @@
   window.addEventListener("resize", () => active && clampShell());
   chrome.runtime.onMessage.addListener((message) => {
     if (message?.type !== "docode:open-editor") return;
-    void openEditor("", { openerRemoved: true });
+    void openFromDocument();
   });
   window.Docode = {
     open: openEditor,
+    openFromDocument,
     restore: (language = "") => openEditor(language, { restoreDraft: true }),
     close: closeEditor
   };
