@@ -28,8 +28,7 @@
 - [x] Keep the editor draggable and resizable.
 - [ ] Preserve the surrounding document font, size, color, and paragraph style after every code block.
 - [ ] Validate arrow-key movement between code blocks and ordinary notes.
-- [ ] Support Markdown-style inline code using single backticks.
-- [ ] Give inline code a monospace font, subtle background, and practical horizontal padding.
+- [x] Rely on Google Docs' native single-backtick inline code when **Enable Markdown** is turned on.
 
 ### Syntax highlighting and languages
 
@@ -41,7 +40,7 @@
 - [ ] Bundle only docode's supported Highlight.js grammars and restrict detection to that language subset.
 - [ ] Add a confidence margin, detection debounce, and language-switch hysteresis so the selector does not jump while the user types.
 - [ ] Preserve explicit fenced-language tags and manual selections as authoritative overrides of automatic detection.
-- [ ] Add search to the language selector.
+- [x] Add search and keyboard navigation to the language selector.
 - [x] Refresh highlighting immediately when reopening or changing an existing block.
 - [ ] Replace the lightweight tokenizer with grammar-complete highlighting where needed.
 
@@ -100,3 +99,15 @@
 - [ ] Add user settings for indentation width, automatic code detection, and insertion behavior.
 - [ ] Add accessible keyboard navigation and screen-reader labels throughout the editor.
 - [ ] Add a lightweight first-run guide and clear recovery messaging.
+- [ ] Explain how to enable Google Docs' native Markdown option for inline code.
+
+## Chrome Web Store release
+
+- [ ] Create PNG extension icons at 16, 32, 48, and 128 pixels and reference them in the manifest.
+- [ ] Prepare store-listing copy, screenshots, and a polished promotional image.
+- [ ] Publish a privacy policy and support page.
+- [ ] Review every permission and document why clipboard, storage, and Google Docs access are needed.
+- [ ] Run a clean-install test on macOS and Windows, including keyboard shortcuts and manual-paste recovery.
+- [ ] Validate document reload, collaboration, and readability/editability without docode installed.
+- [ ] Build and inspect a clean submission ZIP containing only extension runtime files.
+- [ ] Complete Chrome Web Store developer registration and submit the release for review.

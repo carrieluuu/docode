@@ -23,7 +23,7 @@ The prototype currently supports:
 - Automatic language selection from fenced openers
 - Live language inference when the toolbar or keyboard shortcut opens a blank editor
 - Opener-free launch from the Chrome toolbar, Option+Shift+C on macOS, or Alt+Shift+C on Windows/Linux
-- A compact language selector
+- A searchable, keyboard-accessible language selector
 - Smart Canvas-inspired visual styling
 - Draggable and resizable editor placement
 - Per-document local draft recovery
@@ -63,7 +63,7 @@ Chrome shortcuts can be customized at `chrome://extensions/shortcuts` if the def
 
 ## Using the editor
 
-- Choose a language from the selector or include it in the opening fence.
+- Choose a language from the selector or include it in the opening fence. Type to filter by name or alias, then use the arrow keys and Enter to select it; Escape closes the menu.
 - Open docode without leaving trigger text by using the toolbar button, **Option+Shift+C** on macOS, or **Alt+Shift+C** on Windows/Linux.
 - Press **Tab** or **Shift+Tab** to indent or dedent.
 - Drag the top toolbar to move the editor.
@@ -98,7 +98,7 @@ The prototype intentionally has no runtime dependencies or build step.
 npm test
 ```
 
-The tests cover indentation, auto-indent, fence sanitization, block fingerprints, language detection, Smart Paste classification, safe HTML escaping, and syntax-token rendering.
+The tests cover indentation, auto-indent, fence sanitization, block fingerprints, language detection, language-selector filtering and navigation, Smart Paste classification, safe HTML escaping, and syntax-token rendering.
 
 ### Project structure
 
@@ -113,6 +113,7 @@ docode/
 │   ├── block-registry.js  # Local code fingerprints and language memory
 │   ├── smart-paste.js     # Conservative clipboard code classification
 │   ├── highlighter.js     # Dependency-free V1 syntax tokenizer
+│   ├── language-selector-model.js # Search ranking and keyboard navigation
 │   └── languages.js       # Supported languages and aliases
 └── tests/
 ```
