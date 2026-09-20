@@ -91,6 +91,10 @@
     await navigator.clipboard.writeText(text);
   }
 
+  async function writePlainText(text) {
+    await navigator.clipboard.writeText(text);
+  }
+
   function pasteClipboard() {
     const doc = inputDocument();
     doc.defaultView?.focus();
@@ -110,6 +114,7 @@
     hasTextSelection,
     pasteClipboard,
     readSelectedText,
-    writeClipboard
+    writeClipboard,
+    writePlainText
   };
 })();

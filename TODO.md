@@ -49,10 +49,10 @@
 
 - [x] Preserve line breaks and indentation when inserting editor content.
 - [x] Provide rich-text and plain-text clipboard formats.
-- [ ] Detect likely multiline source code pasted directly into Google Docs.
-- [ ] Offer a lightweight **Format as code** action after likely code is pasted.
+- [x] Detect fenced code and likely multiline source code pasted directly into Google Docs.
+- [x] Open likely code as a reviewable editor draft with **Insert** and **Paste normally** actions.
 - [ ] Optionally create a code block automatically based on user settings.
-- [ ] Infer a likely language from pasted code and let the user correct it.
+- [x] Infer a likely language from pasted code and let the user correct it.
 - [ ] Validate paste behavior from VS Code, GitHub, LeetCode, Stack Overflow, ChatGPT, and terminals.
 
 ### Persistence and compatibility
