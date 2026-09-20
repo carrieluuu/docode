@@ -32,6 +32,7 @@ The prototype currently supports:
 - Per-document language memory without adding hidden characters to copied code
 - Reopening and updating a selected docode block in place
 - Converting selected legacy code or ordinary text into an editable docode block
+- Smart Paste detection for fenced code, multiline source, and common terminal commands
 
 ## Documents remain portable
 
@@ -70,6 +71,7 @@ Chrome shortcuts can be customized at `chrome://extensions/shortcuts` if the def
 - Select **Insert** to write the formatted code into the document.
 - To edit an existing block, select the complete block in Google Docs and invoke docode again. When Chrome allows automatic selection capture, the editor opens it immediately. Otherwise, choose **Edit selection** in the console. The primary action then becomes **Update in Docs** and replaces the selection.
 - Selecting unmarked code before invoking docode imports it into the editor and upgrades it to a reusable docode block.
+- Pasting likely multiline code directly into Google Docs opens a prefilled review draft with language inference. Choose **Insert** to format it or **Paste normally** to keep the original clipboard behavior.
 - If automatic insertion is unavailable, click the document and press Command+V or Ctrl+V. The draft stays recoverable until Docs receives the paste.
 
 ## Known limitations
@@ -79,6 +81,7 @@ Google Docs uses a canvas-based editor and does not expose a supported live-care
 - A typed fenced opener remains visible and must be removed manually; use the toolbar or keyboard shortcut to avoid it.
 - Existing blocks must currently be selected before invoking docode; Docs does not expose a supported document index for a collapsed caret.
 - Language memory is local to the current Chrome profile; another device falls back to automatic detection or manual selection.
+- Smart Paste intentionally ignores single-line snippets and uncertain multiline content to avoid interrupting ordinary writing.
 - The editor is an overlay during active editing; changes are written back when inserted.
 - The Google Docs text-event bridge is undocumented and needs broader compatibility testing.
 - Collaboration behavior still needs validation with a second account and without the extension installed.
@@ -95,7 +98,7 @@ The prototype intentionally has no runtime dependencies or build step.
 npm test
 ```
 
-The tests cover indentation, auto-indent, fence sanitization, block fingerprints, language detection, safe HTML escaping, and syntax-token rendering.
+The tests cover indentation, auto-indent, fence sanitization, block fingerprints, language detection, Smart Paste classification, safe HTML escaping, and syntax-token rendering.
 
 ### Project structure
 
@@ -108,6 +111,7 @@ docode/
 │   ├── docs-adapter.js    # Google Docs event, caret, and clipboard bridge
 │   ├── editor-model.js    # Pure indentation and fence behavior
 │   ├── block-registry.js  # Local code fingerprints and language memory
+│   ├── smart-paste.js     # Conservative clipboard code classification
 │   ├── highlighter.js     # Dependency-free V1 syntax tokenizer
 │   └── languages.js       # Supported languages and aliases
 └── tests/

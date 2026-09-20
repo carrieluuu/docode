@@ -53,6 +53,7 @@
     bash: [
       [/^#!.*\b(bash|sh|zsh)\b/m, 10],
       [/^\s*(echo|export|source)\s+/m, 4],
+      [/^\s*(npm|pnpm|yarn|git|docker|kubectl|curl|node|python3?)\s+/m, 5],
       [/\$\{?[A-Za-z_][A-Za-z0-9_]*\}?/, 3],
       [/^\s*(fi|done|esac)\s*$/m, 4]
     ],

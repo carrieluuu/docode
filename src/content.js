@@ -4,6 +4,7 @@
 
   const { normalize, all: languages } = window.DocodeLanguages;
   const { detect: detectLanguage } = window.DocodeLanguageDetector;
+  const smartPaste = window.DocodeSmartPaste;
   const { highlight } = window.DocodeHighlighter;
   const model = window.DocodeEditorModel;
   const blockRegistry = window.DocodeBlockRegistry;
@@ -13,6 +14,7 @@
   let active = null;
   let openingFromDocument = false;
   let awaitingDocsPaste = false;
+  let bypassNextSmartPaste = false;
   let completionMessage = "Code inserted into Google Docs";
   let pendingBlock = null;
   let manualPlacement = false;
@@ -29,6 +31,7 @@
       <span class="dc-auto-language" hidden>Auto</span>
       <div class="dc-actions">
         <button class="dc-secondary-button dc-load-selection" type="button" hidden>Edit selection</button>
+        <button class="dc-secondary-button dc-paste-normal" type="button" hidden>Paste normally</button>
         <button class="dc-button dc-insert" type="button">Insert</button>
       </div>
       <button class="dc-icon-button dc-close" type="button" aria-label="Close">×</button>
@@ -50,6 +53,7 @@
   const languageSelect = shell.querySelector(".dc-language");
   const autoLanguage = shell.querySelector(".dc-auto-language");
   const loadSelectionButton = shell.querySelector(".dc-load-selection");
+  const pasteNormallyButton = shell.querySelector(".dc-paste-normal");
   const commitButton = shell.querySelector(".dc-insert");
   const status = shell.querySelector(".dc-status");
   Object.entries(languages).forEach(([value, definition]) => {
@@ -114,7 +118,12 @@
   }
 
   let saveTimer;
-  function saveDraft() {
+  function clearStoredDraft() {
+    clearTimeout(saveTimer);
+    chrome.storage.local.remove(storageKey());
+  }
+
+  function saveDraft(savedMessage = "Draft saved") {
     clearTimeout(saveTimer);
     status.textContent = "Saving…";
     saveTimer = setTimeout(() => {
@@ -129,7 +138,7 @@
           updatedAt: Date.now()
         }
       });
-      status.textContent = "Draft saved";
+      status.textContent = savedMessage;
     }, 180);
   }
 
@@ -165,13 +174,15 @@
       returnStyle: docs.currentTextStyle(),
       autoDetect: options.autoDetect === true || (!selectedBlock && !language.trim()),
       blockId: selectedBlock?.id || null,
-      mode: selectedBlock ? "edit" : "insert"
+      mode: selectedBlock ? "edit" : "insert",
+      originalPaste: options.originalPaste || null
     };
     active = session;
     languageSelect.value = active.language;
-    textarea.value = selectedBlock?.code || "";
+    textarea.value = options.initialCode ?? selectedBlock?.code ?? "";
     commitButton.textContent = selectedBlock ? "Update in Docs" : "Insert";
     loadSelectionButton.hidden = selectedBlock || !options.allowSelectionLoad;
+    pasteNormallyButton.hidden = !options.smartPaste;
     shell.hidden = false;
     manualPlacement = false;
     positionShell();
@@ -183,7 +194,8 @@
       && storedDraft?.pending
       && storedDraft.mode === "edit"
       && storedDraft.blockId === selectedBlock.id;
-    const insertDraft = !selectedBlock
+    const insertDraft = !options.skipDraft
+      && !selectedBlock
       && storedDraft?.pending
       && storedDraft.mode !== "edit";
     const draft = options.restoreDraft || matchingEditDraft || insertDraft ? storedDraft : null;
@@ -194,12 +206,15 @@
       status.textContent = selectedBlock ? "Edit draft restored" : "Draft restored";
     } else if (selectedBlock) {
       status.textContent = "Editing selected code";
+    } else if (options.smartPaste) {
+      status.textContent = "Smart Paste captured — review before inserting";
     } else {
       status.textContent = "Draft saved locally";
     }
     autoLanguage.hidden = !active.autoDetect;
     updateDetectedLanguage();
     render();
+    if (options.smartPaste) saveDraft("Smart Paste captured · Draft saved");
     requestAnimationFrame(() => textarea.focus());
   }
 
@@ -207,6 +222,7 @@
     shell.hidden = true;
     active = null;
     awaitingDocsPaste = false;
+    bypassNextSmartPaste = false;
     pendingBlock = null;
   }
 
@@ -337,26 +353,86 @@
     });
   });
 
+  function completeNormalPaste() {
+    bypassNextSmartPaste = false;
+    clearStoredDraft();
+    closeEditor();
+    showToast("Pasted without docode formatting");
+  }
+
+  pasteNormallyButton.addEventListener("click", async () => {
+    const original = active?.originalPaste;
+    if (!original?.text) return;
+    status.textContent = "Pasting normally…";
+    try {
+      if (original.html) await docs.writeClipboard(original.text, original.html);
+      else await docs.writePlainText(original.text);
+      bypassNextSmartPaste = true;
+      shell.hidden = true;
+      const pasted = docs.pasteClipboard();
+      if (pasted) {
+        if (bypassNextSmartPaste) completeNormalPaste();
+      } else {
+        shell.hidden = false;
+        status.textContent = "Copied — click the document and paste";
+        showToast("Original content copied — press ⌘V or Ctrl+V to paste normally");
+      }
+    } catch {
+      bypassNextSmartPaste = false;
+      shell.hidden = false;
+      status.textContent = "Could not access the clipboard";
+    }
+  });
+
   function completeInsertion(message = completionMessage) {
     awaitingDocsPaste = false;
     if (pendingBlock) {
       void blockRegistry.remember(docs.documentId(), pendingBlock.code, pendingBlock.language).catch(() => {});
       pendingBlock = null;
     }
-    chrome.storage.local.remove(storageKey());
+    clearStoredDraft();
     closeEditor();
     showToast(message);
   }
 
-  function onDocsPaste() {
-    if (!awaitingDocsPaste) return;
-    // Let Docs consume the paste before hiding the editor and clearing recovery.
-    setTimeout(() => {
-      if (awaitingDocsPaste) completeInsertion();
-    }, 0);
+  function onDocsPaste(event) {
+    if (bypassNextSmartPaste) {
+      setTimeout(() => {
+        if (bypassNextSmartPaste) completeNormalPaste();
+      }, 0);
+      return;
+    }
+    if (awaitingDocsPaste) {
+      // Let Docs consume docode's own paste before hiding the editor and
+      // clearing recovery. This path must never be recaptured as Smart Paste.
+      setTimeout(() => {
+        if (awaitingDocsPaste) completeInsertion();
+      }, 0);
+      return;
+    }
+    if (active) return;
+
+    const pastedText = event.clipboardData?.getData("text/plain");
+    const analysis = smartPaste.analyze(pastedText);
+    if (!analysis) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    void openEditor(analysis.language, {
+      autoDetect: !analysis.explicitLanguage,
+      initialCode: analysis.code,
+      openerRemoved: true,
+      originalPaste: {
+        html: event.clipboardData?.getData("text/html") || "",
+        text: pastedText
+      },
+      skipDraft: true,
+      smartPaste: true
+    });
   }
 
   commitButton.addEventListener("click", async () => {
+    bypassNextSmartPaste = false;
     const value = model.stripOuterFence(textarea.value);
     const language = languageSelect.value;
     const openerRemoved = active?.openerRemoved !== false;

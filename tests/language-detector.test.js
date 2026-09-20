@@ -16,6 +16,7 @@ test("detects common language signatures", () => {
   assert.equal(languageFor('System.out.println("hello");'), "java");
   assert.equal(languageFor('SELECT name FROM users WHERE active = true;'), "sql");
   assert.equal(languageFor('package main\nfunc main() { fmt.Println("hello") }'), "go");
+  assert.equal(languageFor("git status\nnpm run test"), "bash");
 });
 
 test("does not guess ambiguous prose", () => {
