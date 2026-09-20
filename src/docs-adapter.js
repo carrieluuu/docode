@@ -49,6 +49,36 @@
     };
   }
 
+  function hasTextSelection() {
+    const documents = [document, inputDocument()];
+    const browserSelection = documents.some((doc) => {
+      const selection = doc.defaultView?.getSelection?.();
+      return selection && !selection.isCollapsed && selection.toString().length > 0;
+    });
+    if (browserSelection) return true;
+
+    // Canvas-based Google Docs represents a text selection with painted
+    // overlays rather than a standard DOM Range.
+    return Array.from(document.querySelectorAll(".kix-selection-overlay")).some((overlay) => {
+      const rect = overlay.getBoundingClientRect();
+      const style = getComputedStyle(overlay);
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+    });
+  }
+
+  async function readSelectedText({ skipSelectionCheck = false } = {}) {
+    if (!skipSelectionCheck && !hasTextSelection()) return null;
+    const doc = inputDocument();
+    doc.defaultView?.focus();
+    try {
+      if (!doc.execCommand?.("copy")) return null;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      return await navigator.clipboard.readText();
+    } catch {
+      return null;
+    }
+  }
+
   async function writeClipboard(text, html) {
     if (window.ClipboardItem && navigator.clipboard.write) {
       const item = new ClipboardItem({
@@ -72,5 +102,14 @@
     }
   }
 
-  window.DocodeDocsAdapter = { currentTextStyle, eventTargets, caretRect, documentId, pasteClipboard, writeClipboard };
+  window.DocodeDocsAdapter = {
+    currentTextStyle,
+    eventTargets,
+    caretRect,
+    documentId,
+    hasTextSelection,
+    pasteClipboard,
+    readSelectedText,
+    writeClipboard
+  };
 })();
