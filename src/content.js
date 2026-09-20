@@ -3,6 +3,7 @@
   window.__docodeLoaded = true;
 
   const { normalize, all: languages } = window.DocodeLanguages;
+  const languageSelectorModel = window.DocodeLanguageSelectorModel;
   const { detect: detectLanguage } = window.DocodeLanguageDetector;
   const smartPaste = window.DocodeSmartPaste;
   const { highlight } = window.DocodeHighlighter;
@@ -25,9 +26,19 @@
   shell.innerHTML = `
     <header class="dc-toolbar">
       <span class="dc-grip" aria-hidden="true">⠿</span>
-      <label class="dc-language-label"><span class="dc-visually-hidden">Language</span>
-        <select class="dc-language"></select>
-      </label>
+      <div class="dc-language-picker">
+        <select class="dc-language dc-visually-hidden" tabindex="-1" aria-hidden="true"></select>
+        <button class="dc-language-trigger" type="button" aria-label="Language: Plain text" aria-haspopup="listbox" aria-expanded="false">
+          <span class="dc-language-trigger-label">Plain text</span><span class="dc-language-chevron" aria-hidden="true">▾</span>
+        </button>
+        <div class="dc-language-menu" hidden>
+          <label class="dc-visually-hidden" for="dc-language-search">Search languages</label>
+          <input id="dc-language-search" class="dc-language-search" type="search" placeholder="Search languages…"
+            role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="dc-language-options"
+            autocomplete="off" spellcheck="false">
+          <div id="dc-language-options" class="dc-language-options" role="listbox" aria-label="Languages"></div>
+        </div>
+      </div>
       <span class="dc-auto-language" hidden>Auto</span>
       <div class="dc-actions">
         <button class="dc-secondary-button dc-load-selection" type="button" hidden>Edit selection</button>
@@ -51,6 +62,11 @@
   const textarea = shell.querySelector(".dc-editor");
   const code = shell.querySelector(".dc-highlight code");
   const languageSelect = shell.querySelector(".dc-language");
+  const languageTrigger = shell.querySelector(".dc-language-trigger");
+  const languageTriggerLabel = shell.querySelector(".dc-language-trigger-label");
+  const languageMenu = shell.querySelector(".dc-language-menu");
+  const languageSearch = shell.querySelector(".dc-language-search");
+  const languageOptions = shell.querySelector(".dc-language-options");
   const autoLanguage = shell.querySelector(".dc-auto-language");
   const loadSelectionButton = shell.querySelector(".dc-load-selection");
   const pasteNormallyButton = shell.querySelector(".dc-paste-normal");
@@ -62,6 +78,85 @@
     option.textContent = definition.label;
     languageSelect.append(option);
   });
+
+  let visibleLanguageOptions = [];
+  let activeLanguageIndex = -1;
+
+  function syncLanguagePicker() {
+    const selected = languages[languageSelect.value] || languages.plain;
+    languageTriggerLabel.textContent = selected.label;
+    languageTrigger.setAttribute("aria-label", `Language: ${selected.label}`);
+    languageOptions.querySelectorAll(".dc-language-option").forEach((option) => {
+      option.setAttribute("aria-selected", String(option.dataset.language === languageSelect.value));
+    });
+  }
+
+  function markActiveLanguage() {
+    const optionElements = [...languageOptions.querySelectorAll(".dc-language-option")];
+    optionElements.forEach((option, index) => {
+      const activeOption = index === activeLanguageIndex;
+      option.classList.toggle("dc-language-option-active", activeOption);
+      if (activeOption) {
+        languageSearch.setAttribute("aria-activedescendant", option.id);
+        option.scrollIntoView({ block: "nearest" });
+      }
+    });
+    if (activeLanguageIndex < 0) languageSearch.removeAttribute("aria-activedescendant");
+  }
+
+  function renderLanguageOptions(query = "") {
+    visibleLanguageOptions = languageSelectorModel.filter(languages, query);
+    languageOptions.replaceChildren();
+    if (!visibleLanguageOptions.length) {
+      const empty = document.createElement("div");
+      empty.className = "dc-language-empty";
+      empty.textContent = "No matching languages";
+      languageOptions.append(empty);
+      activeLanguageIndex = -1;
+      markActiveLanguage();
+      return;
+    }
+    visibleLanguageOptions.forEach((option, index) => {
+      const button = document.createElement("button");
+      button.id = `dc-language-option-${option.id}`;
+      button.className = "dc-language-option";
+      button.type = "button";
+      button.role = "option";
+      button.dataset.language = option.id;
+      button.setAttribute("aria-selected", String(option.id === languageSelect.value));
+      button.textContent = option.label;
+      button.addEventListener("pointermove", () => {
+        activeLanguageIndex = index;
+        markActiveLanguage();
+      });
+      button.addEventListener("click", () => chooseLanguage(option.id));
+      languageOptions.append(button);
+    });
+    markActiveLanguage();
+  }
+
+  function openLanguageMenu() {
+    languageSearch.value = "";
+    activeLanguageIndex = languageSelectorModel.filter(languages, "")
+      .findIndex((option) => option.id === languageSelect.value);
+    languageMenu.hidden = false;
+    languageTrigger.setAttribute("aria-expanded", "true");
+    renderLanguageOptions();
+    requestAnimationFrame(() => languageSearch.focus());
+  }
+
+  function closeLanguageMenu({ focusTrigger = false } = {}) {
+    languageMenu.hidden = true;
+    languageTrigger.setAttribute("aria-expanded", "false");
+    languageSearch.removeAttribute("aria-activedescendant");
+    if (focusTrigger) languageTrigger.focus();
+  }
+
+  function chooseLanguage(language) {
+    languageSelect.value = language;
+    languageSelect.dispatchEvent(new Event("change"));
+    closeLanguageMenu();
+  }
 
   function storageKey() {
     return `docode:${docs.documentId()}:draft`;
@@ -112,6 +207,7 @@
     }
     if (languageSelect.value !== result.language) {
       languageSelect.value = result.language;
+      syncLanguagePicker();
       render();
     }
     autoLanguage.textContent = `Auto · ${languages[result.language].label}`;
@@ -212,6 +308,7 @@
       status.textContent = "Draft saved locally";
     }
     autoLanguage.hidden = !active.autoDetect;
+    syncLanguagePicker();
     updateDetectedLanguage();
     render();
     if (options.smartPaste) saveDraft("Smart Paste captured · Draft saved");
@@ -219,6 +316,7 @@
   }
 
   function closeEditor() {
+    closeLanguageMenu();
     shell.hidden = true;
     active = null;
     awaitingDocsPaste = false;
@@ -307,9 +405,46 @@
   languageSelect.addEventListener("change", () => {
     if (active) active.autoDetect = false;
     autoLanguage.hidden = true;
+    syncLanguagePicker();
     render();
     saveDraft();
     textarea.focus();
+  });
+
+  languageTrigger.addEventListener("click", () => {
+    if (languageMenu.hidden) openLanguageMenu();
+    else closeLanguageMenu({ focusTrigger: true });
+  });
+
+  languageSearch.addEventListener("input", () => {
+    activeLanguageIndex = 0;
+    renderLanguageOptions(languageSearch.value);
+  });
+
+  languageSearch.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      activeLanguageIndex = languageSelectorModel.moveIndex(
+        activeLanguageIndex,
+        event.key === "ArrowDown" ? 1 : -1,
+        visibleLanguageOptions.length
+      );
+      markActiveLanguage();
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      const option = visibleLanguageOptions[activeLanguageIndex];
+      if (option) chooseLanguage(option.id);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeLanguageMenu({ focusTrigger: true });
+    } else if (event.key === "Tab") {
+      closeLanguageMenu();
+    }
+  });
+
+  document.addEventListener("pointerdown", (event) => {
+    if (!languageMenu.hidden && !event.target.closest(".dc-language-picker")) closeLanguageMenu();
   });
 
   textarea.addEventListener("keydown", (event) => {
@@ -476,7 +611,7 @@
   const toolbar = shell.querySelector(".dc-toolbar");
   let drag = null;
   toolbar.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0 || event.target.closest("button, select, label")) return;
+    if (event.button !== 0 || event.target.closest("button, select, input, label, [role='option']")) return;
     const rect = shell.getBoundingClientRect();
     drag = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
     manualPlacement = true;
