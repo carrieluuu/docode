@@ -61,6 +61,28 @@ When making local changes, use **Reload** on the extension card and reload the G
 
 Chrome shortcuts can be customized at `chrome://extensions/shortcuts` if the default conflicts with another extension or local setup.
 
+## Chrome Web Store release
+
+Submission copy, privacy disclosures, reviewer instructions, and asset guidance live in [`store/`](store/). The production manifest includes PNG icons at 16, 32, 48, and 128 pixels.
+
+On macOS, regenerate the committed icon and promotional assets with:
+
+```sh
+npm run assets
+```
+
+Build the upload archive with:
+
+```sh
+npm run package
+```
+
+The resulting `dist/docode-v<version>.zip` contains only `manifest.json`, `src/`, and `icons/`, with the manifest at the archive root. The `dist/` directory is intentionally ignored by Git.
+
+## Privacy and support
+
+docode processes document selections, code, and clipboard content locally to provide its visible editing features. It has no analytics, advertising, or developer-operated server. Read the full [privacy policy](store/privacy-policy.md) or visit [support](store/support.md).
+
 ## Using the editor
 
 - Choose a language from the selector or include it in the opening fence. Type to filter by name or alias, then use the arrow keys and Enter to select it; Escape closes the menu.
@@ -115,6 +137,9 @@ docode/
 │   ├── highlighter.js     # Dependency-free V1 syntax tokenizer
 │   ├── language-selector-model.js # Search ranking and keyboard navigation
 │   └── languages.js       # Supported languages and aliases
+├── icons/                  # Runtime and Store icon sizes
+├── scripts/                # Store-asset rendering and packaging
+├── store/                  # Listing, privacy, support, and review materials
 └── tests/
 ```
 

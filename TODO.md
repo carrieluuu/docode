@@ -103,11 +103,13 @@
 
 ## Chrome Web Store release
 
-- [ ] Create PNG extension icons at 16, 32, 48, and 128 pixels and reference them in the manifest.
-- [ ] Prepare store-listing copy, screenshots, and a polished promotional image.
-- [ ] Publish a privacy policy and support page.
-- [ ] Review every permission and document why clipboard, storage, and Google Docs access are needed.
+- [x] Create PNG extension icons at 16, 32, 48, and 128 pixels and reference them in the manifest.
+- [x] Prepare store-listing copy and a 440×280 promotional image.
+- [ ] Capture at least one real 1280×800 product screenshot; aim for the five-shot sequence in `store/listing.md`.
+- [x] Draft a privacy policy and support page.
+- [ ] Publish the privacy policy and support URLs by merging them to the public repository.
+- [x] Review every permission and document why clipboard, storage, and Google Docs access are needed.
 - [ ] Run a clean-install test on macOS and Windows, including keyboard shortcuts and manual-paste recovery.
 - [ ] Validate document reload, collaboration, and readability/editability without docode installed.
-- [ ] Build and inspect a clean submission ZIP containing only extension runtime files.
+- [x] Build and inspect a clean submission ZIP containing only extension runtime files.
 - [ ] Complete Chrome Web Store developer registration and submit the release for review.
