@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="280" viewBox="0 0 440 280">
+  <rect width="440" height="280" fill="#17233c"/>
+  <circle cx="393" cy="32" r="116" fill="#1a73e8" opacity=".18"/>
+  <circle cx="36" cy="278" r="132" fill="#8ab4f8" opacity=".08"/>
+  <g transform="translate(42 48)">
+    <rect width="72" height="72" rx="17" fill="#1a73e8"/>
+    <path d="M28 21 15 36l13 15M44 21l13 15-13 15M41 17l-10 38" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="42" y="164" fill="#fff" font-family="Arial, sans-serif" font-size="44" font-weight="700">docode</text>
+  <text x="42" y="200" fill="#d2e3fc" font-family="Arial, sans-serif" font-size="19">Developer mode for Google Docs</text>
+  <rect x="42" y="226" width="217" height="32" rx="16" fill="#fff" opacity=".1"/>
+  <text x="57" y="248" fill="#fff" font-family="Arial, sans-serif" font-size="13" font-weight="600">Write · highlight · keep in Docs</text>
+</svg>
