@@ -20,6 +20,10 @@ Reads text that the user has selected and explicitly asks docode to edit. This i
 
 Writes the user's edited code to the clipboard as both formatted HTML and plain text so Google Docs can insert a syntax-highlighted block and provide manual-paste recovery when automatic insertion is unavailable.
 
+### `scripting`
+
+Activates docode's packaged editor scripts and styles on a Google Docs tab when the user explicitly clicks the extension icon or invokes its keyboard shortcut. This is needed for documents that were already open when docode was installed or updated; Chrome does not automatically add newly installed content scripts to those existing tabs. Scripts are injected only into Google Docs document pages allowed by the extension's host permission.
+
 ### Host access: `https://docs.google.com/document/*`
 
 Runs docode only on Google Docs document pages, where it detects explicit editor actions and likely code pastes, displays the code editor, and inserts or updates formatted code. No access is requested for other Google services or websites.
