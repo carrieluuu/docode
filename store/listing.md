@@ -20,20 +20,29 @@ English
 
 ## Detailed description
 
-docode adds a focused developer writing experience to Google Docs while keeping Google Docs as the source of truth.
+docode makes Google Docs feel at home for code-heavy notes, technical documentation, interview prep, and all the programming knowledge already living in your Google Drive.
 
-Open the editor from the extension button or a keyboard shortcut, write or paste multiline code, choose a programming language, and insert a clean, syntax-highlighted block into your document. Inserted content remains ordinary Google Docs text, so collaborators can read and edit it without installing docode.
+How to open docode:
+
+1. Open any Google Docs document.
+2. Click the docode icon in your Chrome toolbar. You can pin it from Chrome's Extensions menu for one-click access.
+3. Or use the keyboard shortcut: Option+Shift+C on macOS, or Alt+Shift+C on Windows and Linux.
+
+Write or paste multiline code, choose a language, and insert a clean, syntax-highlighted block without leaving your document. Select an existing code block before opening docode to edit it and update it in place.
+
+Inserted content remains ordinary Google Docs text, so collaborators can read and edit it without installing docode—and your formatting remains readable even if the extension is removed.
 
 Key features:
 
 - Editable multiline code editor inspired by Google Docs Smart Canvas
-- Syntax highlighting for Python, JavaScript, TypeScript, Java, C, C++, C#, Go, SQL, Bash, HTML, CSS, and JSON
+- Syntax highlighting for popular programming and markup languages
 - Searchable language selector and automatic language detection
 - Tab and Shift+Tab indentation with lightweight auto-indent
 - Smart Paste for likely source code and fenced code blocks
 - Reopen and update selected code blocks
 - Local draft recovery if insertion needs to be completed manually
-- macOS and Windows/Linux keyboard shortcuts
+- One-click launch from the Chrome toolbar
+- Keyboard shortcuts for macOS, Windows, and Linux
 
 docode does not execute code, connect to development services, serve ads, or transmit document content to the developer. Code and preferences are processed locally in the browser.
 
